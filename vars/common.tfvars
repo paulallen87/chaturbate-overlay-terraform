@@ -1,0 +1,1 @@
+public_key_path = "keys/chaturbate.pub"

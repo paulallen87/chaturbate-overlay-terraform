@@ -1,0 +1,57 @@
+[
+  {
+    "cpu": 256,
+    "essential": true,
+    "image": "${image_url}",
+    "memory": 512,
+    "name": "${container_name}",
+    "portMappings": [
+      {
+        "containerPort": 8080,
+        "protocol": "tcp"
+      },
+      {
+        "containerPort": 9090,
+        "protocol": "tcp"
+      }
+    ],
+    "mountPoints": [
+      {
+        "sourceVolume": "certs",
+        "containerPath": "/build/certs",
+        "readOnly": true
+      },
+      {
+        "sourceVolume": "config",
+        "containerPath": "/build/config",
+        "readOnly": true
+      }
+    ],
+    "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+            "awslogs-group": "${log_group_name}",
+            "awslogs-region": "${log_group_region}",
+            "awslogs-stream-prefix": "${log_group_prefix}"
+        }
+    },
+    "environment": [
+      {
+        "name": "ACL_ENABLED",
+        "value": "0"
+      },
+      {
+        "name": "DEBUG",
+        "value": "chaturbate:*"
+      },
+      {
+        "name": "DEBUG_COLORS",
+        "value": "0"
+      },
+      {
+        "name": "DEBUG_DEPTH",
+        "value": "10"
+      }
+    ]
+  }
+]
