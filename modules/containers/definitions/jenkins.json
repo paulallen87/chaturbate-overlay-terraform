@@ -1,0 +1,44 @@
+[
+  {
+    "cpu": ${cpu},
+    "essential": true,
+    "image": "${image_url}",
+    "memory": ${memory},
+    "name": "${container_name}",
+    "portMappings": [
+      {
+        "containerPort": ${container_port},
+        "protocol": "tcp"
+      },
+      {
+        "containerPort": ${agent_port},
+        "protocol": "tcp"
+      }
+    ],
+    "mountPoints": [
+      {
+        "sourceVolume": "jenkins",
+        "containerPath": "/jenkins",
+        "readOnly": false
+      }
+    ],
+    "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+            "awslogs-group": "${log_group_name}",
+            "awslogs-region": "${log_group_region}",
+            "awslogs-stream-prefix": "${log_group_prefix}"
+        }
+    },
+    "environment": [
+      {
+        "name": "CONTAINER_USER",
+        "value": "jenkins"
+      },
+      {
+        "name": "CONTAINER_GROUP",
+        "value": "jenkins"
+      }
+    ]
+  }
+]

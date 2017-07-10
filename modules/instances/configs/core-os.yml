@@ -1,0 +1,87 @@
+#cloud-config
+
+write-files:
+  - path: /etc/conf.d/nfs
+    permissions: '0644'
+    content: |
+      OPTS_RPC_MOUNTD=""
+
+coreos:
+  locksmith:
+    reboot_strategy: "reboot"
+    window_start: "Sat 10:00"
+    window_length: "30h"
+
+  units:
+    - name: update-engine.service
+      command: stop
+
+    - name: rpc-statd.service
+      command: start
+      enable: true
+
+    - name: mnt-efs.mount
+      command: start
+      enable: true
+      content: |
+        [Unit]
+        Description=Mount EFS
+        Conflicts=umount.target
+        Restart=always
+        Before=local-fs.target umount.target
+        Requires=network-online.target
+        Requires=rpc-statd.service
+        After=network-online.target
+        After=rpc-statd.service
+
+        [Mount]
+        What=${efs_ip_address}:/
+        Where=/mnt/efs
+        Type=nfs
+        Options=rw
+        DirectoryMode=0777
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: amazon-ecs-agent.service
+      command: start
+      runtime: true
+      content: |
+        [Unit]
+        Description=AWS ECS Agent
+        Documentation=https://docs.aws.amazon.com/AmazonECS/latest/developerguide/
+        Requires=docker.socket mnt-efs.mount
+        After=docker.socket mnt-efs.mount
+
+        [Service]
+        Environment=ECS_CLUSTER=${ecs_cluster_name}
+        Environment=ECS_LOGLEVEL=${ecs_log_level}
+        Environment=ECS_VERSION=${ecs_agent_version}
+        Restart=on-failure
+        RestartSec=30
+        RestartPreventExitStatus=5
+        SyslogIdentifier=ecs-agent
+        ExecStartPre=-/bin/mkdir -p /var/log/ecs /var/ecs-data /etc/ecs
+        ExecStartPre=-/usr/bin/docker kill ecs-agent
+        ExecStartPre=-/usr/bin/docker rm ecs-agent
+        ExecStartPre=/usr/bin/docker pull amazon/amazon-ecs-agent:$${ECS_VERSION}
+        ExecStartPre=chmod -R 777 /mnt/efs
+        ExecStart=/usr/bin/docker run --name ecs-agent \
+                                      --volume=/var/run/docker.sock:/var/run/docker.sock \
+                                      --volume=/var/log/ecs:/log \
+                                      --volume=/var/ecs-data:/data \
+                                      --volume=/mnt/efs:/mnt/efs \
+                                      --volume=/sys/fs/cgroup:/sys/fs/cgroup:ro \
+                                      --volume=/run/docker/execdriver/native:/var/lib/docker/execdriver/native:ro \
+                                      --publish=127.0.0.1:51678:51678 \
+                                      --env=ECS_LOGFILE=/log/ecs-agent.log \
+                                      --env=ECS_LOGLEVEL=$${ECS_LOGLEVEL} \
+                                      --env=ECS_DATADIR=/data \
+                                      --env=ECS_CLUSTER=$${ECS_CLUSTER} \
+                                      --env=ECS_AVAILABLE_LOGGING_DRIVERS='["awslogs"]' \
+                                      --env=ECS_DISABLE_PRIVILEGED=false \
+                                      --log-driver=awslogs \
+                                      --log-opt awslogs-region=${aws_region} \
+                                      --log-opt awslogs-group=${ecs_log_group_name} \
+                                      amazon/amazon-ecs-agent:$${ECS_VERSION}

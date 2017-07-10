@@ -3,6 +3,14 @@
 #sudo chmod 600 keys/chaturbate
 
 docker rm -f terraform
+docker rm -f terraform-get
+
+docker run -i -t \
+  --name=terraform-get \
+  --volume=${PWD}:/data \
+  --workdir=/data \
+  hashicorp/terraform:full \
+  get
 
 docker run -i -t \
   --name=terraform \

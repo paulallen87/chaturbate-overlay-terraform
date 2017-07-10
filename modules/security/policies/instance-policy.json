@@ -27,7 +27,7 @@
       ],
       "Resource": [
         "${instance_log_group_arn}",
-        "${service_log_group_arn}"
+        "${container_log_group_arn}"
       ]
     }
   ]
